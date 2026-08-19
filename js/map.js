@@ -35,6 +35,18 @@ window.YMaps = (() => {
     const firstMetric = container.querySelector('.metricbar, .metricrow, .detail-section');
     container.insertBefore(actions, firstMetric || null);
   }
+  function showDetailPanel(element, html, closeLabel, closeAction) {
+    element.innerHTML = html;
+    const button = document.createElement('button');
+    button.className = 'detail-panel-close';
+    button.type = 'button';
+    button.setAttribute('aria-label', closeLabel);
+    button.title = closeLabel;
+    button.textContent = '×';
+    button.addEventListener('click', closeAction);
+    element.prepend(button);
+    element.classList.add('on');
+  }
   const scoreColor = (v) => C().scoreColors[Math.min(4, Math.max(0, Math.floor((Number(v) || 0) / 20)))];
   const gradeColor = (g) => C().gradeColors[Math.round(Number(g))] || '#aaa';
   const roadGradeColor = (g) => (C().roadGradeColors || C().gradeColors)[Math.round(Number(g))] || '#777';
@@ -97,15 +109,23 @@ window.YMaps = (() => {
   }
   function renderGridDetail(p, type, metric, latlng) {
     const el = document.getElementById('gridDetail');
-    el.innerHTML = detailBase(p, type) + metricSection(p, metric);
+    showDetailPanel(el, detailBase(p, type) + metricSection(p, metric), '격자 상세정보 닫기', closeMainDetail);
     addPanoramaAction(el, latlng, `격자 ${p.grid_id}`);
-    el.classList.add('on');
   }
 
   let mainMap, mainGridLayer, mainOutline, mainDongMask, mainSelected;
   let currentMetric = 'residential', gradeFilter = 'all', selectedDong = '';
   let selectedGridId = null;
   let baseLayers = {};
+  function closeMainDetail() {
+    selectedGridId = null;
+    resetMainHighlight();
+    mainMap?.closePopup();
+    const el = document.getElementById('gridDetail');
+    el.innerHTML = '';
+    el.classList.remove('on');
+    mainMap?.getContainer?.().focus({ preventScroll: true });
+  }
   function initMain() {
     mainMap = L.map('mainMap', { preferCanvas: true, zoomControl: true, zoomSnap: .25 }).setView(C().center, C().zoom);
     baseLayers.carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: '© OpenStreetMap © CARTO' }).addTo(mainMap);
@@ -175,8 +195,7 @@ window.YMaps = (() => {
     const found = selectedFeatureInCurrentLayer();
     if (!found) {
       const el = document.getElementById('gridDetail');
-      el.innerHTML = `<h3>${esc(selectedGridId)}</h3><div class="note">선택한 격자는 현재 표시 지표의 분석대상에 포함되지 않습니다.</div>`;
-      el.classList.add('on');
+      showDetailPanel(el, `<h3>${esc(selectedGridId)}</h3><div class="note">선택한 격자는 현재 표시 지표의 분석대상에 포함되지 않습니다.</div>`, '격자 상세정보 닫기', closeMainDetail);
       return false;
     }
     let layer = null;
@@ -378,6 +397,10 @@ window.YMaps = (() => {
     if (['무차양 버스정류장', '스마트복합쉼터', '쿨링포그', '살수차'].includes(p.policy_type)) return p.name || p.grid_id || '-';
     return p.grid_id || p.name || '-';
   }
+  function closePolicyDetail() {
+    resetPolicySelection(true);
+    policyMap?.getContainer?.().focus({ preventScroll: true });
+  }
   function initPolicy() {
     policyMap = L.map('policyMap', { preferCanvas: true, zoomSnap: .25 }).setView(C().center, C().zoom);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', className: 'soft-osm-tiles' }).addTo(policyMap);
@@ -493,10 +516,9 @@ window.YMaps = (() => {
     layer.getElement?.()?.classList.add('policy-marker-selected');
     L.popup().setLatLng(ll || layer.getBounds?.().getCenter() || layer.getLatLng()).setContent(policyMini(f.properties)).openOn(policyMap);
     const el = document.getElementById('policyDetail');
-    el.innerHTML = policyDetailHTML(f.properties);
+    showDetailPanel(el, policyDetailHTML(f.properties), '정책 상세정보 닫기', closePolicyDetail);
     const center = layer.getBounds?.().getCenter() || layer.getLatLng?.() || ll;
     addPanoramaAction(el, center, policyDisplayName(f.properties));
-    el.classList.add('on');
   }
   function selectRoadLink(layer, f, ll) {
     resetPolicySelection(false);
@@ -505,9 +527,8 @@ window.YMaps = (() => {
     if (layer.bringToFront) layer.bringToFront();
     L.popup().setLatLng(ll).setContent(`<div class="popup-mini"><b>${esc(f.properties.road_name || '도로')}</b><br>${esc(f.properties.link_id || '-')}</div>`).openOn(policyMap);
     const el = document.getElementById('policyDetail');
-    el.innerHTML = roadLinkDetailHTML(f.properties);
+    showDetailPanel(el, roadLinkDetailHTML(f.properties), '도로 상세정보 닫기', closePolicyDetail);
     addPanoramaAction(el, ll || layer.getBounds?.().getCenter(), f.properties.road_name || '살수차 도로 구간');
-    el.classList.add('on');
   }
   function policyStyle(f) {
     const type = f.properties.policy_type, c = C().policyColors[type], gt = f.geometry.type;
