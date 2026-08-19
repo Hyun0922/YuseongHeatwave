@@ -214,11 +214,12 @@ window.YPanorama = (() => {
     }
   }
 
-  function close() {
+  function close({ restoreFocus = true } = {}) {
     requestSerial += 1;
     panorama?.setVisible(false);
     dialog.hidden = true;
-    if (lastTrigger?.focus) lastTrigger.focus();
+    if (restoreFocus && lastTrigger?.focus) lastTrigger.focus();
+    lastTrigger = null;
   }
 
   closeButton.addEventListener('click', close);
