@@ -326,6 +326,10 @@
   rank('residential');
 
   async function openTab(v) {
+    const currentView = document.querySelector('.view.on')?.id.replace(/^v-/, '');
+    if (currentView && currentView !== v) {
+      window.YPanorama?.close({ restoreFocus: false });
+    }
     document.querySelectorAll('.tab').forEach((t) => {
       const active = t.dataset.view === v;
       t.classList.toggle('on', active);
