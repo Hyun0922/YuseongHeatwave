@@ -1,8 +1,315 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>유성구 폭염 대비 취약지역 통합지도</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="css/style.css"></head><body><div id="loading" class="loading">공개용 분석자료와 지도를 불러오는 중입니다.</div><nav><div class="brand">유성구 폭염 통합지도<small>100M GRID</small></div><button class="tab" data-view="overview">분석개요</button><button class="tab on" data-view="map">통합지도</button><button class="tab" data-view="rank">취약지역 순위</button><button class="tab" data-view="compare">지역 비교</button><button class="tab" data-view="policy">정책지원</button><button class="tab" data-view="stats">통계·분석</button><button class="tab" data-view="lst">고해상도 지표면온도</button></nav><main>
-<section class="view" id="v-overview"><div class="wrap"><div class="hero"><h1>100M 격자 단위 유성구 폭염 취약지역 진단</h1><p>기후노출도, 거주·활동 기반 민감도와 대응능력 부족도를 결합해 취약계층 밀집형과 보행 노출 위험형 취약지수를 진단하고 정책지원 후보를 한 화면에서 확인합니다.</p><button class="btn primary" id="openMap">통합지도 열기</button></div><div class="kpis" id="kpis"></div><h2 class="section-title">분석체계 → 취약지수 구성</h2><div class="sub">카드를 선택하면 통합지도의 해당 레이어로 이동합니다.</div><div class="framework"><div class="card" data-metric="climate"><div>🌡️</div><h3>기후노출도</h3><p>Landsat 지표면온도와 기상청 체감온도로 공간별 열 노출을 평가합니다.</p><div class="tags"><span>LST</span><span>KMA ta·chi</span></div></div><div class="card" data-metric="residential"><div>🏠</div><h3>취약계층 밀집형 취약지수</h3><p>거주민의 구조적 취약성과 쉼터 대응여건을 종합한 지수입니다.</p><div class="tags"><span>기후노출</span><span>거주 민감도</span><span>대응부족</span></div></div><div class="card" data-metric="resi_sensitivity"><div>👥</div><h3>거주 기반 민감도</h3><p>연령별 인구구조·사회경제적 취약성·저층 노후건축물을 종합점수로만 공개합니다.</p><div class="tags"><span>인구구조</span><span>취약성 종합</span><span>저층 노후건축물</span></div></div><div class="card" data-metric="resi_response"><div>🛟</div><h3>거주 기반 대응능력 부족도</h3><p>무더위쉼터 접근성과 수용여력 부족을 평가합니다.</p><div class="tags"><span>쉼터 접근성</span><span>수용여력</span></div></div><div class="card" data-metric="activity"><div>🚶</div><h3>보행 노출 위험형 취약지수</h3><p>야외 활동수요와 폭염저감시설 공백을 결합한 지수입니다.</p><div class="tags"><span>기후노출</span><span>활동 민감도</span><span>대응부족</span></div></div><div class="card" data-metric="act_sensitivity"><div>🚌</div><h3>활동 기반 민감도</h3><p>성·연령 활동인구, 시간대별 활동인구와 버스 이용량을 종합합니다.</p><div class="tags"><span>성·연령</span><span>시간대 활동</span><span>버스 이용</span></div></div><div class="card" data-metric="act_response"><div>⛱️</div><h3>활동 기반 대응능력 부족도</h3><p>그늘막·쿨링포그·정류장 차양 등 보행공간 저감시설의 공백을 평가합니다.</p><div class="tags"><span>그늘막</span><span>쿨링포그</span><span>정류장 차양</span></div></div><div class="card" data-metric="diagnosis"><div>🧭</div><h3>두 지수 종합 비교</h3><p>5·5 종합취약지역과 5·4/4·5 우선확대관리지역을 구분합니다.</p><div class="tags"><span>종합취약</span><span>우선확대</span><span>단독취약</span></div></div></div><div class="grid2" style="margin-top:20px"><div class="card pad"><h3>행정동별 5등급 격자 수</h3><div id="dongGrade5" class="chart"></div></div><div class="card pad"><h3>두 취약지수 등급 분포</h3><div class="sub">취약계층 밀집형</div><div id="resiGrades"></div><div class="sub" style="margin-top:18px">보행 노출 위험형</div><div id="actGrades"></div></div></div></div></section>
-<section class="view mapview on" id="v-map"><button class="btn mobile-filter" id="mobileFilter">☰ 필터</button><aside class="map-sidebar"><h3>표시 지표</h3><select id="metricSelect"><option value="residential">취약계층 밀집형 취약지수</option><option value="activity">보행 노출 위험형 취약지수</option><option value="diagnosis">두 지수 종합 비교</option><option value="climate">기후노출도</option><option value="resi_sensitivity">거주 기반 민감도</option><option value="resi_response">거주 기반 대응능력 부족도</option><option value="act_sensitivity">활동 기반 민감도</option><option value="act_response">활동 기반 대응능력 부족도</option><option value="off">표시 지표 끄기</option></select><h3>등급 필터</h3><div class="seg" id="gradeSeg"><button class="on" data-grade="all">1~5등급</button><button data-grade="45">4·5등급</button><button data-grade="5">5등급</button></div><h3>행정동 선택</h3><select id="dongSelect"></select><h3>배경지도</h3><select id="baseSelect"><option value="carto">CARTO Positron</option><option value="osm">OpenStreetMap</option></select><h3>격자 검색</h3><input id="gridSearch" placeholder="예: 다바905253"><button class="btn" id="gridSearchBtn" style="width:100%;margin-top:7px">검색</button><p class="note">공개본에는 Welfare 세부 값·인원, 관리번호, 연락처, 로컬 경로와 분석 불필요 원본 필드가 포함되지 않습니다.</p></aside><div class="mapbox"><div id="mainMap" class="leafmap"></div><div id="mainLegend" class="legend-box"></div><div id="mapStatus" class="map-status"></div><div id="gridDetail" class="detail-panel"></div></div></section>
-<section class="view" id="v-rank"><div class="wrap"><h2>취약지역 순위</h2><div class="sub">최종 공개 지수 또는 교차진단을 기준으로 상위 격자를 확인합니다.</div><select id="rankType"><option value="residential">취약계층 밀집형</option><option value="activity">보행 노출 위험형</option><option value="diagnosis">두 지수 평균</option></select><div class="card table-wrap" style="margin-top:14px"><table id="rankTable" class="datatable"></table></div></div></section>
-<section class="view" id="v-compare"><div class="wrap compare-wrap"><div class="compare-title-row"><div><h2>지역 비교</h2><div class="sub">최대 4개 행정동의 평균 취약도, 고등급 격자 비율, 교차취약 유형, 구성요소, 두 지수 균형과 정책 대응방향을 함께 비교합니다.</div></div><div class="compare-actions"><button class="btn" id="compareTopBtn" type="button">취약도 상위 4개</button><button class="btn" id="compareResetBtn" type="button">초기화</button></div></div><div class="compare-selects"><select class="compare-select" aria-label="비교 지역 1"></select><select class="compare-select" aria-label="비교 지역 2"></select><select class="compare-select" aria-label="비교 지역 3"></select><select class="compare-select" aria-label="비교 지역 4"></select></div><div id="compareHeadline" class="compare-headline"></div><div class="compare-panels"><div class="card pad"><div class="panel-title"><h3>두 지수 균형도</h3><span>13개 동 위치와 선택지역 강조</span></div><div id="compareScatter" class="compare-scatter"></div></div><div class="card pad"><div class="panel-title"><h3>정책 대응방향 진단</h3><span>지수 격차·구성요소·관리대상 비율 종합</span></div><div id="comparePolicyDirection" class="policy-direction-grid"></div></div></div><div id="compareBody" class="compare-grid compare-cards"></div><div class="compare-panels"><div class="card pad"><div class="panel-title"><h3>평균 취약점수 비교</h3><span>0~100점</span></div><div id="compareScoreBars" class="compare-chart"></div></div><div class="card pad"><div class="panel-title"><h3>4·5등급 격자 비율</h3><span>각 분석대상 대비</span></div><div id="compareGradeBars" class="compare-chart"></div></div></div><div class="compare-panels"><div class="card pad"><div class="panel-title"><h3>교차 취약유형 구성</h3><span>기타 교차지역 제외</span></div><div id="compareDiagnosisMix"></div></div><div class="card pad"><div class="panel-title"><h3>13개 행정동 상대순위</h3><select id="compareRankMetric" class="compact-select"><option value="combinedMean">공통격자 평균</option><option value="resMean">거주 평균</option><option value="actMean">활동 평균</option><option value="riskRate">관리대상 비율</option><option value="joint">종합취약 격자</option></select></div><div id="compareAllRank" class="all-rank-list"></div></div></div><div class="card pad compare-profile-card"><div class="panel-title"><h3>취약성 구성요소 프로필</h3><span>행정동별 평균점수</span></div><div id="compareProfiles" class="profile-grid"></div></div><div class="card pad compare-profile-card"><div class="panel-title"><h3>구성요소 상대강도표</h3><span>색이 진할수록 점수가 높음</span></div><div id="compareHeatmap" class="table-wrap"></div></div><div class="card pad compare-table-card"><div class="panel-title"><h3>핵심 지표 비교표</h3><span>행정동 간 상대순위와 두 지수 차이 포함</span></div><div class="table-wrap compare-table-wrap"><table id="compareTable" class="datatable compare-table"></table></div></div><div id="compareInsight" class="compare-insight"></div></div></section><section class="view mapview" id="v-policy"><aside class="map-sidebar policy-map-sidebar"><h3>정책 유형</h3><select id="policyTypeSelect"></select><details id="roadLayerControls" class="layer-dropdown" style="display:none"><summary>표시 레이어 선택</summary><div class="layer-checks"><label><input type="checkbox" value="1" checked> 도로 고온 1등급</label><label><input type="checkbox" value="2" checked> 도로 고온 2등급</label><label><input type="checkbox" value="3" checked> 도로 고온 3등급</label><label><input type="checkbox" value="4" checked> 도로 고온 4등급</label><label><input type="checkbox" value="5" checked> 도로 고온 5등급</label><label><input type="checkbox" value="priority" checked> 살수차 우선 운영구간</label></div></details><h3>후보 목록</h3><div id="policyList" class="policy-list"></div></aside><div class="mapbox"><div id="policyMap" class="leafmap"></div><div id="policyLegend" class="legend-box"></div><div id="policyStatus" class="map-status"></div><div id="policyDetail" class="detail-panel"></div></div></section>
-<section class="view" id="v-stats"><div class="wrap"><h2>통계·분석</h2><div class="grid2"><div class="card pad"><h3>두 지수 등급 교차표</h3><div id="crossMatrix"></div></div><div class="card pad"><h3>두 지수 점수 산점도</h3><div id="scatter" class="scatter"></div></div></div><div class="card pad" style="margin-top:18px"><h3>해석 기준</h3><p class="sub">보라색은 두 지수 모두 5등급인 종합취약지역, 주황색은 5·4 또는 4·5인 우선확대관리지역입니다. 최종 결과는 Natural Breaks 5등급과 분석 적격 기준을 적용한 공개용 자료입니다.</p></div></div></section>
-<section class="view mapview" id="v-lst"><aside class="map-sidebar"><h3>Landsat 30M 지표</h3><select id="lstMetric"><option value="mean">평균 LST</option><option value="p90">상위 10% LST</option><option value="max">최고 LST</option><option value="above33">33℃ 이상 관측비율</option></select><button class="btn on lst-toggle" id="lstToggleBtn" type="button" aria-pressed="true">지표면온도 레이어 끄기</button><p class="note">2023년~2025년 5월~9월의 Landsat 위성 30m 격자 관측 결과를 제공합니다. Landsat 위성의 한반도 통과 시각은 오전 11시 전후이며 재방문 주기는 8~16일입니다. 따라서 해당 온도는 하루 최고 지표면온도가 아니며 연속된 폭염 기간 전체를 직접 나타내지 않습니다.</p></aside><div class="mapbox"><div id="lstMap" class="leafmap"></div><div id="lstLegend" class="legend-box"></div></div></section>
-</main><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="js/config.js"></script><script src="js/charts.js"></script><script src="js/map.js"></script><script src="js/app.js"></script></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>유성구 폭염 대비 취약지역 통합지도</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="loading" class="loading" role="status" aria-live="polite">
+<div class="loading-card">
+<strong id="loadingTitle">공개용 분석자료와 지도를 불러오는 중입니다.</strong>
+<p id="loadingDetail">잠시만 기다려 주세요.</p>
+<button class="btn primary" id="loadingRetry" type="button" hidden>다시 시도</button>
+</div>
+</div>
+<nav aria-label="주요 화면"><div class="brand">유성구 폭염 통합지도<small>100M GRID</small>
+</div>
+<button class="tab" type="button" data-view="overview" aria-controls="v-overview">분석개요</button>
+<button class="tab on" type="button" data-view="map" aria-controls="v-map" aria-current="page">통합지도</button>
+<button class="tab" type="button" data-view="rank" aria-controls="v-rank">취약지역 순위</button>
+<button class="tab" type="button" data-view="compare" aria-controls="v-compare">지역 비교</button>
+<button class="tab" type="button" data-view="policy" aria-controls="v-policy">정책지원</button>
+<button class="tab" type="button" data-view="lst" aria-controls="v-lst">고해상도 지표면온도</button>
+</nav><main>
+<section class="view" id="v-overview"><div class="wrap">
+<div class="hero">
+<h1>100M 격자 단위 유성구 폭염 취약지역 진단</h1>
+<p>기후노출도, 거주·활동 기반 민감도와 대응능력 부족도를 결합해 취약계층 밀집형과 보행 노출 위험형 취약지수를 진단하고 정책지원 후보를 한 화면에서 확인합니다.</p>
+<button class="btn primary" id="openMap" type="button">통합지도 열기</button>
+</div>
+<div class="kpis" id="kpis"></div>
+<h2 class="section-title">분석체계 → 취약지수 구성</h2>
+<div class="sub">카드를 선택하면 통합지도의 해당 레이어로 이동합니다.</div>
+<div class="framework">
+<div class="card" data-metric="climate">
+<div>🌡️</div>
+<h3>기후노출도</h3>
+<p>Landsat 지표면온도와 기상청 체감온도로 공간별 열 노출을 평가합니다.</p>
+<div class="tags">
+<span>LST</span><span>KMA ta·chi</span>
+</div>
+</div>
+<div class="card" data-metric="residential">
+<div>🏠</div>
+<h3>취약계층 밀집형 취약지수</h3>
+<p>거주민의 구조적 취약성과 쉼터 대응여건을 종합한 지수입니다.</p>
+<div class="tags">
+<span>기후노출</span><span>거주 민감도</span><span>대응부족</span>
+</div>
+</div>
+<div class="card" data-metric="resi_sensitivity">
+<div>👥</div>
+<h3>거주 기반 민감도</h3>
+<p>연령별 인구구조·사회경제적 취약성·저층 노후건축물을 종합점수로만 공개합니다.</p>
+<div class="tags">
+<span>인구구조</span><span>취약성 종합</span><span>저층 노후건축물</span>
+</div>
+</div>
+<div class="card" data-metric="resi_response">
+<div>🛟</div>
+<h3>거주 기반 대응능력 부족도</h3>
+<p>무더위쉼터 접근성과 수용여력 부족을 평가합니다.</p>
+<div class="tags">
+<span>쉼터 접근성</span><span>수용여력</span>
+</div>
+</div>
+<div class="card" data-metric="activity">
+<div>🚶</div>
+<h3>보행 노출 위험형 취약지수</h3>
+<p>야외 활동수요와 폭염저감시설 공백을 결합한 지수입니다.</p>
+<div class="tags">
+<span>기후노출</span><span>활동 민감도</span><span>대응부족</span>
+</div>
+</div>
+<div class="card" data-metric="act_sensitivity">
+<div>🚌</div>
+<h3>활동 기반 민감도</h3>
+<p>성·연령 활동인구, 시간대별 활동인구와 버스 이용량을 종합합니다.</p>
+<div class="tags">
+<span>성·연령</span><span>시간대 활동</span><span>버스 이용</span>
+</div>
+</div>
+<div class="card" data-metric="act_response">
+<div>⛱️</div>
+<h3>활동 기반 대응능력 부족도</h3>
+<p>그늘막·쿨링포그·정류장 차양 등 보행공간 저감시설의 공백을 평가합니다.</p>
+<div class="tags">
+<span>그늘막</span><span>쿨링포그</span><span>정류장 차양</span>
+</div>
+</div>
+<div class="card" data-metric="diagnosis">
+<div>🧭</div>
+<h3>두 지수 종합 비교</h3>
+<p>5·5 종합취약지역과 5·4/4·5 우선확대관리지역을 구분합니다.</p>
+<div class="tags">
+<span>종합취약</span><span>우선확대</span><span>단독취약</span>
+</div>
+</div>
+</div>
+<div class="grid2" style="margin-top:20px">
+<div class="card pad">
+<h3>행정동별 5등급 격자 수</h3>
+<div id="dongGrade5" class="chart"></div>
+</div>
+<div class="card pad">
+<h3>두 취약지수 등급 분포</h3>
+<div class="sub">취약계층 밀집형</div>
+<div id="resiGrades"></div>
+<div class="sub" style="margin-top:18px">보행 노출 위험형</div>
+<div id="actGrades"></div>
+</div>
+</div>
+<h2 class="section-title">지수 관계 요약</h2>
+<div class="sub">두 취약지수의 등급 조합과 점수 관계를 분석개요에서 함께 확인합니다.</div>
+<div class="grid2" style="margin-top:20px">
+<div class="card pad">
+<h3>두 지수 등급 교차표</h3>
+<div id="crossMatrix"></div>
+</div>
+<div class="card pad">
+<h3>두 지수 점수 산점도</h3>
+<div id="scatter" class="scatter"></div>
+</div>
+</div>
+<div class="card pad" style="margin-top:18px">
+<h3>해석 기준</h3>
+<p class="sub">보라색은 두 지수 모두 5등급인 종합취약지역, 주황색은 5·4 또는 4·5인 우선확대관리지역입니다. 최종 결과는 Natural Breaks 5등급과 분석 적격 기준을 적용한 공개용 자료입니다.</p>
+</div>
+</div></section>
+<section class="view mapview on" id="v-map"><button class="btn mobile-filter" id="mobileFilter" type="button" aria-controls="mainSidebar" aria-expanded="false">☰ 필터</button><aside class="map-sidebar" id="mainSidebar"><button class="sidebar-close" type="button" aria-label="통합지도 필터 닫기">×</button><h3>표시 지표</h3>
+<select id="metricSelect" aria-label="표시 지표"><option value="residential">취약계층 밀집형 취약지수</option>
+<option value="activity">보행 노출 위험형 취약지수</option>
+<option value="diagnosis">두 지수 종합 비교</option>
+<option value="climate">기후노출도</option>
+<option value="resi_sensitivity">거주 기반 민감도</option>
+<option value="resi_response">거주 기반 대응능력 부족도</option>
+<option value="act_sensitivity">활동 기반 민감도</option>
+<option value="act_response">활동 기반 대응능력 부족도</option>
+<option value="off">표시 지표 끄기</option></select><h3>등급 필터</h3>
+<div class="seg" id="gradeSeg">
+<button class="on" data-grade="all">1~5등급</button><button data-grade="45">4·5등급</button><button data-grade="5">5등급</button>
+</div>
+<h3>행정동 선택</h3>
+<select id="dongSelect" aria-label="행정동 선택"></select><h3>배경지도</h3>
+<select id="baseSelect" aria-label="배경지도"><option value="carto">CARTO Positron</option>
+<option value="osm">OpenStreetMap</option></select><h3>격자 검색</h3>
+<input id="gridSearch" aria-label="격자코드 검색" placeholder="예: 다바905253"><button class="btn" id="gridSearchBtn" type="button" style="width:100%;margin-top:7px">검색</button>
+<h3>상위 격자</h3>
+<div id="topGridMeta" class="top-grid-meta" aria-live="polite"></div>
+<div id="topGridList" class="top-grid-list" aria-label="점수 내림차순 상위 격자"></div>
+<p class="note">공개본에는 Welfare 세부 값·인원, 관리번호, 연락처, 로컬 경로와 분석 불필요 원본 필드가 포함되지 않습니다.</p></aside><div class="mapbox">
+<div id="mainMap" class="leafmap" role="region" aria-label="유성구 폭염 취약지역 통합지도"></div>
+<div id="mainLegend" class="legend-box"></div>
+<div id="mapStatus" class="map-status" aria-live="polite"></div>
+<div id="gridDetail" class="detail-panel" aria-live="polite"></div>
+</div></section>
+<section class="view" id="v-rank"><div class="wrap">
+<h2>취약지역 순위</h2>
+<div class="sub">최종 공개 지수 또는 교차진단을 기준으로 상위 격자를 확인합니다.</div>
+<select id="rankType" aria-label="순위 기준"><option value="residential">취약계층 밀집형</option>
+<option value="activity">보행 노출 위험형</option>
+<option value="diagnosis">두 지수 평균</option></select><div class="card table-wrap" style="margin-top:14px"><table id="rankTable" class="datatable"></table></div>
+</div></section>
+<section class="view" id="v-compare"><div class="wrap compare-wrap">
+<div class="compare-title-row">
+<div>
+<h2>지역 비교</h2>
+<div class="sub">최대 4개 행정동의 공통격자 취약도, 위험 규모·집중도·심각도, 수요가중 점수, 공간군집과 정책 실행기회를 함께 비교합니다.</div>
+</div>
+<div class="compare-actions">
+<button class="btn" id="compareTopBtn" type="button">분석 우선순위 상위 4개</button><button class="btn" id="compareResetBtn" type="button">초기화</button>
+</div>
+</div>
+<div class="compare-selects">
+<select class="compare-select" aria-label="비교 지역 1"></select><select class="compare-select" aria-label="비교 지역 2"></select><select class="compare-select" aria-label="비교 지역 3"></select><select class="compare-select" aria-label="비교 지역 4"></select>
+</div>
+<div id="compareHeadline" class="compare-headline"></div>
+<div class="compare-panels">
+<div class="card pad">
+<div class="panel-title">
+<h3>두 지수 균형도</h3>
+<span>공통격자 평균 · 점 크기=관리대상 규모 · 색=집중도</span>
+</div>
+<div id="compareScatter" class="compare-scatter"></div>
+</div>
+<div class="card pad">
+<div class="panel-title">
+<h3>정책 대응방향 진단</h3>
+<span>유성구 대비 특이 구성요소와 4축 우선순위 종합</span>
+</div>
+<div id="comparePolicyDirection" class="policy-direction-grid"></div>
+</div>
+</div>
+<div id="compareBody" class="compare-grid compare-cards"></div>
+<div class="compare-panels">
+<div class="card pad">
+<div class="panel-title">
+<h3>위험 구조</h3>
+<span>규모 · 집중도 · P90 심각도 · 최대 연속군집</span>
+</div>
+<div id="compareRiskStructure" class="compare-analysis-list"></div>
+</div>
+<div class="card pad">
+<div class="panel-title">
+<h3>정책 실행기회</h3>
+<span>행정동 공간결합 · 후보 유형 · 500m 관리대상 포괄률</span>
+</div>
+<div id="comparePolicyOpportunity" class="compare-analysis-list"></div>
+</div>
+</div>
+<div class="compare-panels">
+<div class="card pad">
+<div class="panel-title">
+<h3>공통격자 평균 취약점수</h3>
+<span>동일한 격자끼리 비교 · 0~100점</span>
+</div>
+<div id="compareScoreBars" class="compare-chart"></div>
+</div>
+<div class="card pad">
+<div class="panel-title">
+<h3>4·5등급 격자 비율</h3>
+<span>각 분석대상 대비</span>
+</div>
+<div id="compareGradeBars" class="compare-chart"></div>
+</div>
+</div>
+<div class="compare-panels">
+<div class="card pad">
+<div class="panel-title">
+<h3>교차 취약유형 구성</h3>
+<span>기타 교차지역 제외</span>
+</div>
+<div id="compareDiagnosisMix"></div>
+</div>
+<div class="card pad">
+<div class="panel-title">
+<h3>13개 행정동 상대순위</h3>
+<select id="compareRankMetric" class="compact-select"><option value="priorityScore">분석 우선순위</option>
+<option value="combinedMean">공통격자 평균</option>
+<option value="pairedResMean">공통격자 거주 평균</option>
+<option value="pairedActMean">공통격자 활동 평균</option>
+<option value="riskRate">관리대상 비율</option>
+<option value="riskCount">관리대상 규모</option>
+<option value="combinedP90">상위위험 P90</option>
+<option value="largestCluster">최대 연속군집</option>
+<option value="resWeighted">인구가중 거주점수</option>
+<option value="actWeighted">활동수요가중 점수</option>
+<option value="uncoveredRate">정책후보 500m 미포괄률</option></select>
+</div>
+<div id="compareAllRank" class="all-rank-list"></div>
+</div>
+</div>
+<div class="card pad compare-profile-card">
+<div class="panel-title">
+<h3>취약성 구성요소 프로필</h3>
+<span>행정동별 평균점수</span>
+</div>
+<div id="compareProfiles" class="profile-grid"></div>
+</div>
+<div class="card pad compare-profile-card">
+<div class="panel-title">
+<h3>유성구 대비 구성요소 상대강도</h3>
+<span>행정동 백분위 · 셀 안은 실제 평균점수</span>
+</div>
+<div id="compareHeatmap" class="table-wrap"></div>
+</div>
+<div class="card pad compare-table-card">
+<div class="panel-title">
+<h3>핵심 지표 비교표</h3>
+<span>공통격자·수요가중·위험구조·정책후보 지표</span>
+</div>
+<div class="table-wrap compare-table-wrap"><table id="compareTable" class="datatable compare-table"></table></div>
+</div>
+<div id="compareInsight" class="compare-insight"></div>
+</div></section><section class="view mapview" id="v-policy"><button class="btn mobile-filter" id="policyMobileFilter" type="button" aria-controls="policySidebar" aria-expanded="false">☰ 필터</button><aside class="map-sidebar policy-map-sidebar" id="policySidebar"><button class="sidebar-close" type="button" aria-label="정책지원 필터 닫기">×</button><h3>정책 유형</h3>
+<select id="policyTypeSelect" aria-label="정책 유형"></select><details id="roadLayerControls" class="layer-dropdown" style="display:none"><summary>표시 레이어 선택</summary><div class="layer-checks">
+<label><input type="checkbox" value="1" checked> 도로 고온 1등급</label><label><input type="checkbox" value="2" checked> 도로 고온 2등급</label><label><input type="checkbox" value="3" checked> 도로 고온 3등급</label><label><input type="checkbox" value="4" checked> 도로 고온 4등급</label><label><input type="checkbox" value="5" checked> 도로 고온 5등급</label><label><input type="checkbox" value="priority" checked> 살수차 우선 운영구간</label>
+</div></details><h3>후보 목록</h3>
+<div id="policyList" class="policy-list"></div></aside><div class="mapbox">
+<div id="policyMap" class="leafmap" role="region" aria-label="폭염 정책지원 후보 지도"></div>
+<div id="policyLegend" class="legend-box"></div>
+<div id="policyStatus" class="map-status" aria-live="polite"></div>
+<div id="policyDetail" class="detail-panel" aria-live="polite"></div>
+</div></section>
+<section class="view mapview" id="v-lst"><button class="btn mobile-filter" id="lstMobileFilter" type="button" aria-controls="lstSidebar" aria-expanded="false">☰ 필터</button><aside class="map-sidebar" id="lstSidebar"><button class="sidebar-close" type="button" aria-label="지표면온도 필터 닫기">×</button><h3>Landsat 30M 지표</h3>
+<select id="lstMetric" aria-label="지표면온도 지표"><option value="mean">평균 LST</option>
+<option value="p90">상위 10% LST</option>
+<option value="max">최고 LST</option>
+<option value="above33">33℃ 이상 관측비율</option></select><button class="btn on lst-toggle" id="lstToggleBtn" type="button" aria-pressed="true">지표면온도 레이어 끄기</button><p class="note">2023년~2025년 5월~9월의 Landsat 위성 30m 격자 관측 결과를 제공합니다. Landsat 위성의 한반도 통과 시각은 오전 11시 전후이며 재방문 주기는 8~16일입니다. 따라서 해당 온도는 하루 최고 지표면온도가 아니며 연속된 폭염 기간 전체를 직접 나타내지 않습니다.</p></aside><div class="mapbox">
+<div id="lstMap" class="leafmap" role="region" aria-label="Landsat 30미터 지표면온도 지도"></div>
+<div id="lstLegend" class="legend-box"></div>
+</div></section>
+</main>
+<div id="panoramaDialog" class="panorama-dialog" role="dialog" aria-labelledby="panoramaTitle" hidden>
+<div class="panorama-shell">
+<button id="panoramaResize" class="panorama-resize" type="button" aria-label="거리뷰 창 크기 조절" title="드래그하거나 방향키로 창 크기 조절">↖</button>
+<header class="panorama-head">
+<div class="panorama-heading"><span class="panorama-brand">네이버 거리뷰</span><span class="panorama-title-separator" aria-hidden="true">·</span><h2 id="panoramaTitle">선택 위치</h2></div>
+<button id="panoramaClose" class="panorama-close" type="button" aria-label="네이버 거리뷰 닫기">×</button>
+</header>
+<div class="panorama-stage">
+<div id="naverPanorama" class="naver-panorama" aria-label="선택 위치의 네이버 거리뷰"></div>
+<div id="panoramaStatus" class="panorama-status" role="status" aria-live="polite">거리뷰를 준비하는 중입니다.</div>
+</div>
+<footer class="panorama-foot">
+<span id="panoramaMeta">선택 위치에서 반경 300m 내 가장 가까운 거리뷰를 찾습니다.</span>
+<button id="panoramaRetry" class="btn" type="button" hidden>다시 시도</button>
+</footer>
+</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="js/config.js"></script><script src="js/charts.js"></script><script src="js/panorama.js"></script><script src="js/map.js"></script><script src="js/compare.js"></script><script src="js/app.js"></script>
+</body>
+</html>

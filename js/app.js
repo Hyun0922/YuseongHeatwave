@@ -1,14 +1,65 @@
 (async () => {
   const files = APP_CONFIG.dataFiles;
-  async function load() {
-    if (window.EMBEDDED_DATA) return window.EMBEDDED_DATA;
-    const entries = await Promise.all(Object.entries(files).map(async ([k, u]) => [k, await (await fetch(u)).json()]));
-    return Object.fromEntries(entries);
+  const data = { ...(window.EMBEDDED_DATA || {}) };
+  const pendingLoads = new Map();
+  const loading = {
+    root: document.getElementById('loading'),
+    title: document.getElementById('loadingTitle'),
+    detail: document.getElementById('loadingDetail'),
+    retry: document.getElementById('loadingRetry')
+  };
+  function showLoading(title, detail = '잠시만 기다려 주세요.', retryAction = null, isError = false) {
+    loading.title.textContent = title;
+    loading.detail.textContent = detail;
+    loading.retry.hidden = !retryAction;
+    loading.retry.onclick = retryAction;
+    loading.root.classList.toggle('is-error', isError);
+    loading.root.hidden = false;
   }
-  const data = await load();
+  function hideLoading() {
+    loading.root.hidden = true;
+    loading.root.classList.remove('is-error');
+    loading.retry.hidden = true;
+    loading.retry.onclick = null;
+  }
+  function loadKey(key) {
+    if (data[key]) return Promise.resolve(data[key]);
+    if (pendingLoads.has(key)) return pendingLoads.get(key);
+    const task = fetch(files[key])
+      .then((response) => {
+        if (!response.ok) throw new Error(`${files[key]} 응답 오류 (${response.status})`);
+        return response.json();
+      })
+      .then((value) => {
+        data[key] = value;
+        return value;
+      })
+      .finally(() => pendingLoads.delete(key));
+    pendingLoads.set(key, task);
+    return task;
+  }
+  async function prepare(keys, title, action, retryAction) {
+    const missing = keys.filter((key) => !data[key]);
+    if (missing.length) showLoading(title);
+    try {
+      await Promise.all(missing.map(loadKey));
+      if (action) await action();
+      hideLoading();
+      return true;
+    } catch (error) {
+      console.error(error);
+      showLoading('자료를 불러오지 못했습니다.', error?.message || '네트워크 상태를 확인한 뒤 다시 시도해 주세요.', retryAction, true);
+      return false;
+    }
+  }
   window.APP = { data };
-  document.getElementById('loading').remove();
-  YMaps.init(APP);
+  const initialReady = await prepare(
+    Object.keys(files),
+    '전체 지도 자료를 한 번에 불러오는 중입니다.',
+    () => YMaps.init(window.APP),
+    () => window.location.reload()
+  );
+  if (!initialReady) return;
   const S = data.summary;
   const num = (v, d = 1) => v == null || Number.isNaN(Number(v)) ? '-' : Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d, minimumFractionDigits: 0 });
   const avg = (rows, key) => rows.length ? rows.reduce((a, x) => a + (Number(x[key]) || 0), 0) / rows.length : null;
@@ -28,14 +79,47 @@
   YCharts.scatter(document.getElementById('scatter'), data.diagnosis.features);
 
   const metric = document.getElementById('metricSelect');
-  metric.onchange = () => YMaps.setMetric(metric.value);
+  const metricDataKeys = (value) => ['activity', 'climate', 'act_sensitivity', 'act_response'].includes(value)
+    ? ['activity']
+    : value === 'diagnosis' ? ['diagnosis'] : [];
+  async function selectMetric(value) {
+    return prepare(
+      metricDataKeys(value),
+      '선택한 지도 지표를 불러오는 중입니다.',
+      () => YMaps.setMetric(value),
+      () => selectMetric(value)
+    );
+  }
+  metric.onchange = () => selectMetric(metric.value);
   document.querySelectorAll('#gradeSeg button').forEach((b) => { b.onclick = () => YMaps.setGrade(b.dataset.grade); });
   document.getElementById('dongSelect').innerHTML = '<option value="">전체 행정동</option>' + S.dong_summary.map((x) => `<option>${x.dong}</option>`).join('');
   document.getElementById('dongSelect').onchange = (e) => YMaps.setDong(e.target.value);
   document.getElementById('baseSelect').onchange = (e) => YMaps.setBase(e.target.value);
-  document.getElementById('gridSearchBtn').onclick = () => { if (!YMaps.searchGrid(document.getElementById('gridSearch').value)) alert('격자코드를 찾지 못했습니다.'); };
+  async function searchGrid() {
+    const gridId = document.getElementById('gridSearch').value;
+    if (!gridId.trim()) return;
+    if (YMaps.searchGrid(gridId)) return;
+    await prepare(
+      ['activity', 'diagnosis'],
+      '전체 격자에서 검색하는 중입니다.',
+      () => { if (!YMaps.searchGrid(gridId)) alert('격자코드를 찾지 못했습니다.'); },
+      searchGrid
+    );
+  }
+  document.getElementById('gridSearchBtn').onclick = searchGrid;
   document.getElementById('gridSearch').onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('gridSearchBtn').click(); };
-  document.querySelectorAll('.framework .card').forEach((c) => { c.onclick = () => { openTab('map'); YMaps.setMetric(c.dataset.metric); }; });
+  document.querySelectorAll('.framework .card').forEach((c) => {
+    const activate = () => { openTab('map'); selectMetric(c.dataset.metric); };
+    c.setAttribute('role', 'button');
+    c.tabIndex = 0;
+    c.onclick = activate;
+    c.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activate();
+      }
+    };
+  });
   document.getElementById('openMap').onclick = () => openTab('map');
 
   const policyTypes = Object.keys(APP_CONFIG.policyColors);
@@ -46,6 +130,21 @@
   document.getElementById('lstMetric').onchange = (e) => YMaps.setLSTMetric(e.target.value);
   document.getElementById('lstToggleBtn').onclick = () => YMaps.toggleLST();
 
+  let compareInitialized = false;
+  function initCompare() {
+  if (window.YCompare) {
+    window.YCompare.init({
+      data, num, pct, esc,
+      openDong: (dong) => {
+        openTab('map');
+        document.getElementById('dongSelect').value = dong;
+        YMaps.setDong(dong);
+      }
+    });
+    return;
+  }
+  if (compareInitialized) return;
+  compareInitialized = true;
   // Region comparison: combine all public grid indicators and expose both selected-area and district-wide context.
   const dongNames = S.dong_summary.map((x) => x.dong);
   const group = (features, key) => {
@@ -211,24 +310,69 @@
     renderAllDongRank();
   }
   renderCompare();
+  }
 
   function rank(kind) {
     const feats = kind === 'residential' ? data.residential.features : kind === 'activity' ? data.activity.features : data.diagnosis.features;
     const rows = feats.map((f) => f.properties).sort((a, b) => (kind === 'diagnosis' ? b.combined_score - a.combined_score : b.score - a.score)).slice(0, 200);
     document.getElementById('rankTable').innerHTML = '<thead><tr><th>순위</th><th>격자</th><th>행정동</th><th>점수</th><th>등급/진단</th></tr></thead><tbody>' + rows.map((p, i) => `<tr><td>${i + 1}</td><td>${p.grid_id}</td><td>${p.dong || p.dong_res}</td><td>${Number(p.score ?? p.combined_score).toFixed(2)}</td><td>${p.grade ?? p.diagnosis}</td></tr>`).join('') + '</tbody>';
-    [...document.querySelectorAll('#rankTable tbody tr')].forEach((tr, i) => { tr.onclick = () => { openTab('map'); YMaps.setMetric(kind); YMaps.searchGrid(rows[i].grid_id); }; });
+    [...document.querySelectorAll('#rankTable tbody tr')].forEach((tr, i) => { tr.onclick = async () => { await openTab('map'); await selectMetric(kind); YMaps.searchGrid(rows[i].grid_id); }; });
   }
-  document.getElementById('rankType').onchange = (e) => rank(e.target.value);
+  async function showRank(kind) {
+    const keys = kind === 'residential' ? [] : [kind];
+    return prepare(keys, '순위 자료를 불러오는 중입니다.', () => rank(kind), () => showRank(kind));
+  }
+  document.getElementById('rankType').onchange = (e) => showRank(e.target.value);
   rank('residential');
 
-  function openTab(v) {
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.view === v));
+  async function openTab(v) {
+    document.querySelectorAll('.tab').forEach((t) => {
+      const active = t.dataset.view === v;
+      t.classList.toggle('on', active);
+      if (active) t.setAttribute('aria-current', 'page');
+      else t.removeAttribute('aria-current');
+    });
     document.querySelectorAll('.view').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v));
+    let ready = true;
+    if (v === 'compare') {
+      ready = await prepare(['activity', 'diagnosis'], '지역 비교 자료를 불러오는 중입니다.', initCompare, () => openTab(v));
+    }
+    if (v === 'policy') {
+      ready = await prepare(['policy', 'roadHeat'], '정책지원 지도를 불러오는 중입니다.', () => YMaps.ensurePolicy(), () => openTab(v));
+    }
+    if (v === 'lst') {
+      ready = await prepare(['lst'], '고해상도 지표면온도를 불러오는 중입니다.', () => YMaps.ensureLST(), () => openTab(v));
+    }
+    if (!ready) return false;
     if (v === 'map') YMaps.invalidate('main');
     if (v === 'policy') YMaps.invalidate('policy');
     if (v === 'lst') YMaps.invalidate('lst');
+    return true;
   }
   document.querySelectorAll('.tab').forEach((t) => { t.onclick = () => openTab(t.dataset.view); });
-  document.getElementById('mobileFilter').onclick = () => document.querySelector('#v-map .map-sidebar').classList.toggle('open');
+  function bindMobileSidebar(buttonId, sidebarId) {
+    const button = document.getElementById(buttonId);
+    const sidebar = document.getElementById(sidebarId);
+    const closeButton = sidebar?.querySelector('.sidebar-close');
+    if (!button || !sidebar || !closeButton) return;
+    const setOpen = (open) => {
+      sidebar.classList.toggle('open', open);
+      button.setAttribute('aria-expanded', String(open));
+    };
+    button.onclick = () => setOpen(!sidebar.classList.contains('open'));
+    closeButton.onclick = () => {
+      setOpen(false);
+      button.focus();
+    };
+    sidebar.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        button.focus();
+      }
+    });
+  }
+  bindMobileSidebar('mobileFilter', 'mainSidebar');
+  bindMobileSidebar('policyMobileFilter', 'policySidebar');
+  bindMobileSidebar('lstMobileFilter', 'lstSidebar');
   openTab('map');
 })();

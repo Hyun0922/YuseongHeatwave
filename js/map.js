@@ -7,8 +7,10 @@ window.YMaps = (() => {
   const n = (v, d = 1) => v == null || Number.isNaN(Number(v))
     ? '-'
     : Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d, minimumFractionDigits: 0 });
-  const row = (label, v, unit = '', d = 1) =>
-    `<div class="metricrow"><span>${label}</span><b>${n(v, d)}${v == null ? '' : unit}</b></div>`;
+  const row = (label, v, unit = '', d = 1) => {
+    const value = typeof v === 'string' ? esc(v) : n(v, d);
+    return `<div class="metricrow"><span>${label}</span><b>${value}${v == null || v === '' ? '' : unit}</b></div>`;
+  };
   const bar = (label, v, pct) => {
     const w = Math.max(0, Math.min(100, Number(v) || 0));
     return `<div class="metricbar"><div class="metricbar-head"><span>${label}</span><b>${n(v)}점${pct == null ? '' : ` · 상위 ${n(100 - pct, 1)}%`}</b></div><div class="metricbar-track"><div class="metricbar-fill" style="width:${w}%"></div></div></div>`;
@@ -19,6 +21,20 @@ window.YMaps = (() => {
     const w = Math.max(0, Math.min(100, ((num - min) / (max - min)) * 100));
     return `<div class="metricbar"><div class="metricbar-head"><span>${label}</span><b>${n(num, d)}${unit}</b></div><div class="metricbar-track"><div class="metricbar-fill" style="width:${w}%"></div></div></div>`;
   };
+  function addPanoramaAction(container, latlng, label) {
+    const lat = Number(latlng?.lat), lng = Number(latlng?.lng);
+    if (!container || !Number.isFinite(lat) || !Number.isFinite(lng) || !window.YPanorama) return;
+    const actions = document.createElement('div');
+    actions.className = 'detail-actions';
+    const button = document.createElement('button');
+    button.className = 'btn streetview-btn';
+    button.type = 'button';
+    button.textContent = '네이버 거리뷰';
+    button.addEventListener('click', () => YPanorama.open({ lat, lng, label }));
+    actions.appendChild(button);
+    const firstMetric = container.querySelector('.metricbar, .metricrow, .detail-section');
+    container.insertBefore(actions, firstMetric || null);
+  }
   const scoreColor = (v) => C().scoreColors[Math.min(4, Math.max(0, Math.floor((Number(v) || 0) / 20)))];
   const gradeColor = (g) => C().gradeColors[Math.round(Number(g))] || '#aaa';
   const roadGradeColor = (g) => (C().roadGradeColors || C().gradeColors)[Math.round(Number(g))] || '#777';
@@ -79,9 +95,10 @@ window.YMaps = (() => {
     }
     return '';
   }
-  function renderGridDetail(p, type, metric) {
+  function renderGridDetail(p, type, metric, latlng) {
     const el = document.getElementById('gridDetail');
     el.innerHTML = detailBase(p, type) + metricSection(p, metric);
+    addPanoramaAction(el, latlng, `격자 ${p.grid_id}`);
     el.classList.add('on');
   }
 
@@ -162,9 +179,10 @@ window.YMaps = (() => {
       el.classList.add('on');
       return false;
     }
-    renderGridDetail(found.feature.properties, found.type, currentMetric);
     let layer = null;
     mainGridLayer.eachLayer((l) => { if (l.feature?.properties?.grid_id === selectedGridId) layer = l; });
+    const center = layer?.getBounds?.().getCenter() || L.geoJSON(found.feature).getBounds().getCenter();
+    renderGridDetail(found.feature.properties, found.type, currentMetric, center);
     if (!layer) {
       mainMap.closePopup();
       return false;
@@ -188,6 +206,7 @@ window.YMaps = (() => {
       document.getElementById('mapStatus').textContent = '배경지도와 행정동 경계만 표시';
       mainMap.closePopup();
       document.getElementById('gridDetail').classList.remove('on');
+      renderTopGridList(type, fc);
       renderMainDongMask();
       return;
     }
@@ -220,14 +239,54 @@ window.YMaps = (() => {
     renderMainDongMask();
     renderMainLegend(type);
     document.getElementById('mapStatus').textContent = `${filtered.features.length.toLocaleString()}개 격자 표시${selectedDong ? ' · ' + selectedDong : ''}`;
+    renderTopGridList(type, fc);
     restoreSelectedGrid(false);
+  }
+  function renderTopGridList(type, fc) {
+    const meta = document.getElementById('topGridMeta');
+    const list = document.getElementById('topGridList');
+    if (!meta || !list) return;
+    if (type === 'off') {
+      meta.textContent = '표시 지표가 꺼져 있습니다.';
+      list.innerHTML = '<div class="top-grid-empty">지표를 선택하면 상위 격자가 표시됩니다.</div>';
+      return;
+    }
+    const gradeName = { all: '1~5등급', 45: '4·5등급', 5: '5등급' }[gradeFilter];
+    const metricName = document.getElementById('metricSelect')?.selectedOptions?.[0]?.textContent || '선택 지표';
+    const rows = fc.features
+      .filter((f) => {
+        const p = f.properties;
+        if (type === 'diagnosis' && p.diagnosis === '기타 교차지역') return false;
+        const grade = type === 'diagnosis' ? p.combined_grade : p.grade;
+        const dong = p.dong || p.dong_res;
+        if (selectedDong && dong !== selectedDong) return false;
+        return gradeFilter === 'all' || (gradeFilter === '45' && grade >= 4) || (gradeFilter === '5' && grade === 5);
+      })
+      .map((f) => ({ feature: f, score: Number(valFor(f.properties, currentMetric)) }))
+      .filter((item) => Number.isFinite(item.score))
+      .sort((a, b) => b.score - a.score || String(a.feature.properties.grid_id).localeCompare(String(b.feature.properties.grid_id), 'ko'))
+      .slice(0, 100);
+    meta.textContent = `${metricName} · ${gradeName}${selectedDong ? ` · ${selectedDong}` : ''} · 점수 DESC 상위 ${rows.length}개`;
+    if (!rows.length) {
+      list.innerHTML = '<div class="top-grid-empty">현재 조건에 해당하는 격자가 없습니다.</div>';
+      return;
+    }
+    list.innerHTML = rows.map(({ feature, score }, index) => {
+      const p = feature.properties;
+      const dong = p.dong || p.dong_res || '-';
+      const category = type === 'diagnosis' ? p.diagnosis : `${p.grade}등급`;
+      return `<button class="top-grid-item" type="button" data-grid-id="${esc(p.grid_id)}"><span class="top-rank">${index + 1}</span><span class="top-grid-copy"><b>${esc(p.grid_id)}</b><small>${esc(dong)} · ${esc(category)}</small></span><strong>${n(score)}점</strong></button>`;
+    }).join('');
+    list.querySelectorAll('.top-grid-item').forEach((button) => {
+      button.onclick = () => searchGrid(button.dataset.gridId);
+    });
   }
   function selectMain(layer, f, ll, type) {
     selectedGridId = f.properties.grid_id;
     highlightMainLayer(layer);
     if (layer.bringToFront) layer.bringToFront();
     L.popup().setLatLng(ll || layer.getBounds().getCenter()).setContent(minimalGridPopup(f.properties)).openOn(mainMap);
-    renderGridDetail(f.properties, type, currentMetric);
+    renderGridDetail(f.properties, type, currentMetric, layer.getBounds().getCenter());
   }
   function setMetric(m) {
     currentMetric = m;
@@ -265,7 +324,7 @@ window.YMaps = (() => {
         ['activity', 'activity', app.data.activity],
         ['diagnosis', 'diagnosis', app.data.diagnosis]
       ];
-      const hit = candidates.find(([, , data]) => data.features.some((f) => f.properties.grid_id === gid));
+      const hit = candidates.find(([, , data]) => data?.features?.some((f) => f.properties.grid_id === gid));
       if (!hit) return false;
       setMetric(hit[0]);
       [type, fc] = datasetFor(currentMetric);
@@ -299,6 +358,7 @@ window.YMaps = (() => {
   let roadVisible = { 1: true, 2: true, 3: true, 4: true, 5: true, priority: true };
   function resetPolicySelection(clearPanel = false) {
     policyMap?.closePopup();
+    policySelected?.getElement?.()?.classList.remove('policy-marker-selected');
     if (policySelected && policyLayer?.resetStyle) {
       try { policyLayer.resetStyle(policySelected); } catch (_) { /* no-op */ }
     }
@@ -392,7 +452,8 @@ window.YMaps = (() => {
   }
   function policyDetailHTML(p) {
     const context = [p.policy_type, p.dong].filter(Boolean).join(' · ');
-    const grid = p.grid_id && p.grid_id !== '-' ? row('격자명', p.grid_id) : '';
+    const gridIds = [...new Set([p.grid_id, ...(p.grid_ids || [])].map((value) => String(value || '').trim()).filter((value) => value && value !== '-'))];
+    const grid = gridIds.length ? row('격자명', gridIds.join(', ')) : '';
     const head = `<h3>${esc(policyDisplayName(p))}</h3>${context ? `<div class="note">${esc(context)}</div>` : ''}${row('순위', p.rank, '위', 0)}${p.score != null ? row('우선순위 점수', p.score, '점') : ''}${grid}`;
 
     if (p.policy_type === '스마트복합쉼터') {
@@ -429,9 +490,12 @@ window.YMaps = (() => {
     resetPolicySelection(false);
     policySelected = layer;
     if (layer.setStyle) layer.setStyle({ color: '#111', weight: 5, opacity: 1, fillOpacity: .82 });
+    layer.getElement?.()?.classList.add('policy-marker-selected');
     L.popup().setLatLng(ll || layer.getBounds?.().getCenter() || layer.getLatLng()).setContent(policyMini(f.properties)).openOn(policyMap);
     const el = document.getElementById('policyDetail');
     el.innerHTML = policyDetailHTML(f.properties);
+    const center = layer.getBounds?.().getCenter() || layer.getLatLng?.() || ll;
+    addPanoramaAction(el, center, policyDisplayName(f.properties));
     el.classList.add('on');
   }
   function selectRoadLink(layer, f, ll) {
@@ -442,6 +506,7 @@ window.YMaps = (() => {
     L.popup().setLatLng(ll).setContent(`<div class="popup-mini"><b>${esc(f.properties.road_name || '도로')}</b><br>${esc(f.properties.link_id || '-')}</div>`).openOn(policyMap);
     const el = document.getElementById('policyDetail');
     el.innerHTML = roadLinkDetailHTML(f.properties);
+    addPanoramaAction(el, ll || layer.getBounds?.().getCenter(), f.properties.road_name || '살수차 도로 구간');
     el.classList.add('on');
   }
   function policyStyle(f) {
@@ -464,8 +529,18 @@ window.YMaps = (() => {
     const policyOptions = {
       renderer: L.canvas({ padding: .4 }),
       style: policyStyle,
-      pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 7, color: '#ffffff', weight: 2, fillColor: C().policyColors[f.properties.policy_type], fillOpacity: .91 }),
-      onEachFeature: (f, l) => l.on('click', (e) => selectPolicyLayer(l, f, e.latlng))
+      pointToLayer: (f, ll) => f.properties.policy_type === '무차양 버스정류장'
+        ? L.marker(ll, {
+          icon: L.divIcon({ className: 'bus-stop-div-icon', html: '<span class="bus-stop-pin"><span aria-hidden="true">🚌</span></span>', iconSize: [38, 42], iconAnchor: [19, 40], popupAnchor: [0, -38], tooltipAnchor: [0, -34] }),
+          title: policyDisplayName(f.properties),
+          riseOnHover: true,
+          zIndexOffset: 500
+        })
+        : L.circleMarker(ll, { radius: 7, color: '#ffffff', weight: 2, fillColor: C().policyColors[f.properties.policy_type], fillOpacity: .91 }),
+      onEachFeature: (f, l) => {
+        l.bindTooltip(policyDisplayName(f.properties), { direction: 'top', opacity: .94 });
+        l.on('click', (e) => selectPolicyLayer(l, f, e.latlng));
+      }
     };
     if (policyType === '살수차') {
       policyOptions.renderer = routeRenderer;
@@ -632,5 +707,11 @@ window.YMaps = (() => {
     initPolicy();
     initLST();
   }
-  return { init, setMetric, setGrade, setDong, setBase, searchGrid, setPolicyType, setRoadLayer, setLSTMetric, toggleLST, invalidate };
+  function ensurePolicy() {
+    if (!policyMap) initPolicy();
+  }
+  function ensureLST() {
+    if (!lstMap) initLST();
+  }
+  return { init, ensurePolicy, ensureLST, setMetric, setGrade, setDong, setBase, searchGrid, setPolicyType, setRoadLayer, setLSTMetric, toggleLST, invalidate };
 })();

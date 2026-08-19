@@ -27,7 +27,10 @@ DATA_KEYS = {
     "lst": "lst30m.geojson",
     "summary": "summary.json",
 }
-LOCAL_SCRIPTS = ["config.js", "charts.js", "map.js", "app.js"]
+INDEX_NAME = "index.html"
+SHARE_NAME = "yuseong-heatwave-map-share.html"
+LOCAL_SCRIPTS = ["config.js", "charts.js", "panorama.js", "map.js", "compare.js", "app.js"]
+BUILD_IGNORES = (".git", "__pycache__", "*.pyc", "*.zip", SHARE_NAME)
 REMOVED_POPULATION_FIELDS = {"HRP", "HRP_ratio", "HRPscore_100", "hrp_detail_source"}
 
 
@@ -122,8 +125,21 @@ def embedded_data(data_dir: Path) -> dict[str, Any]:
     return {key: load_json(data_dir / filename) for key, filename in DATA_KEYS.items()}
 
 
+def validate_sources(package_dir: Path) -> None:
+    """Fail before rewriting data when the split-site source is incomplete."""
+    required = [
+        package_dir / INDEX_NAME,
+        package_dir / "css" / "style.css",
+        *[package_dir / "js" / name for name in LOCAL_SCRIPTS],
+        *[package_dir / "data" / name for name in DATA_KEYS.values()],
+    ]
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise FileNotFoundError("필수 원본 파일 누락: " + ", ".join(missing))
+
+
 def build_standalone(package_dir: Path) -> Path:
-    index_path = package_dir / "yuseong-heatwave-map-index.html"
+    index_path = package_dir / INDEX_NAME
     html = index_path.read_text(encoding="utf-8")
     css = (package_dir / "css" / "style.css").read_text(encoding="utf-8")
     html = html.replace('<link rel="stylesheet" href="css/style.css">', f"<style>{css}</style>")
@@ -138,27 +154,22 @@ def build_standalone(package_dir: Path) -> Path:
         source = (package_dir / "js" / name).read_text(encoding="utf-8")
         html = html.replace(f'<script src="js/{name}"></script>', f"<script>{source}</script>")
 
-    output = package_dir / "yuseong-heatwave-map-share.html"
+    output = package_dir / SHARE_NAME
     output.write_text(html, encoding="utf-8")
     return output
 
 
 def validate(package_dir: Path) -> dict[str, int]:
-    required = [
-        package_dir / "yuseong-heatwave-map-index.html",
-        package_dir / "yuseong-heatwave-map-share.html",
-        package_dir / "css" / "style.css",
-        *[package_dir / "js" / name for name in LOCAL_SCRIPTS],
-        *[package_dir / "data" / name for name in DATA_KEYS.values()],
-    ]
-    missing = [str(path) for path in required if not path.exists()]
-    if missing:
-        raise FileNotFoundError("필수 파일 누락: " + ", ".join(missing))
+    validate_sources(package_dir)
+    standalone_path = package_dir / SHARE_NAME
+    if not standalone_path.exists():
+        raise FileNotFoundError(f"단독 HTML 누락: {standalone_path}")
 
     road_count = len(load_json(package_dir / "data" / "road_heat.geojson").get("features", []))
     policy_count = len(load_json(package_dir / "data" / "policy_candidates.geojson").get("features", []))
-    index = (package_dir / "yuseong-heatwave-map-index.html").read_text(encoding="utf-8")
+    index = (package_dir / INDEX_NAME).read_text(encoding="utf-8")
     map_js = (package_dir / "js" / "map.js").read_text(encoding="utf-8")
+    compare_js = (package_dir / "js" / "compare.js").read_text(encoding="utf-8")
     app_js = (package_dir / "js" / "app.js").read_text(encoding="utf-8")
     config_js = (package_dir / "js" / "config.js").read_text(encoding="utf-8")
     css = (package_dir / "css" / "style.css").read_text(encoding="utf-8")
@@ -171,7 +182,7 @@ def validate(package_dir: Path) -> dict[str, int]:
         "features: outlineFC.features.filter((f) => f.properties.dong && f.properties.dong !== selectedDong)" in map_js,
         ("온열질환" + " 고위험 인구") not in index + map_js,
         'class="view mapview on" id="v-map"' in index,
-        'data-view="map">통합지도</button>' in index,
+        'data-view="map"' in index and '>통합지도</button>' in index,
         "p.diagnosis === '기타 교차지역'" in map_js,
         "compareTopBtn" in index + app_js,
         "compareProfiles" in index + app_js,
@@ -181,10 +192,21 @@ def validate(package_dir: Path) -> dict[str, int]:
         "roadRenderer = L.svg" in map_js,
         "compareScatter" in index + app_js,
         "comparePolicyDirection" in index + app_js,
+        "window.YCompare" in compare_js + app_js,
+        "pairedResMean" in compare_js,
+        "combinedP90" in compare_js,
+        "largestCluster" in compare_js,
+        "candidateCoverage" in compare_js,
         "roadPriorityPane" in map_js,
         "lstColors" in map_js + config_js,
         '"center":[36.3578,127.345621],"zoom":15.25' in config_js,
         "soft-osm-tiles" in map_js + css,
+        "policyMobileFilter" in index + app_js,
+        "lstMobileFilter" in index + app_js,
+        "loadingRetry" in index + app_js,
+        "pendingLoads" in app_js,
+        "ensurePolicy" in app_js + map_js,
+        "ensureLST" in app_js + map_js,
     ]
     if not all(checks):
         raise RuntimeError("UI 기능 문자열 검증에 실패했습니다.")
@@ -196,7 +218,7 @@ def make_zip(package_dir: Path, zip_path: Path) -> None:
         zip_path.unlink()
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(package_dir.rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts:
+            if path.is_file() and not any(part in {".git", "__pycache__"} for part in path.parts) and path.suffix != ".pyc":
                 archive.write(path, Path(package_dir.name) / path.relative_to(package_dir))
 
 
@@ -213,7 +235,9 @@ def main() -> None:
     if target != source:
         if target.exists():
             shutil.rmtree(target)
-        shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        shutil.copytree(source, target, ignore=shutil.ignore_patterns(*BUILD_IGNORES))
+
+    validate_sources(target)
 
     if args.road_html:
         count = extract_road_heat(args.road_html, target / "data" / "road_heat.geojson")
