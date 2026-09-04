@@ -19,6 +19,7 @@
 @media(max-width:760px){.diagnosis-mix-head{align-items:flex-start;flex-direction:column}.all-rank-row{grid-template-columns:24px 52px minmax(55px,1fr) 47px}}
 
 /* 2026-08 final contrast, accessible bars and reliable road interaction */
+.light-basemap-tiles{filter:grayscale(1) saturate(0) brightness(1.18) contrast(.62);opacity:.8}
 .soft-osm-tiles{filter:saturate(.96) brightness(1.005) contrast(.99);opacity:1}
 .metricbar-fill,.barfill{background:#193b4c!important}
 .all-rank-row>div i{background:#193b4c}
