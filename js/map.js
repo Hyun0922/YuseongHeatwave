@@ -130,7 +130,7 @@ window.YMaps = (() => {
     mainMap = L.map('mainMap', { preferCanvas: true, zoomControl: true, zoomSnap: .25 }).setView(C().center, C().zoom);
     const osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     const osmAttribution = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
-    baseLayers.light = L.tileLayer(osmTiles, { maxZoom: 19, attribution: osmAttribution, className: 'light-basemap-tiles' }).addTo(mainMap);
+    baseLayers.white = L.tileLayer(osmTiles, { maxZoom: 19, attribution: osmAttribution, className: 'white-basemap-tiles' }).addTo(mainMap);
     baseLayers.osm = L.tileLayer(osmTiles, { maxZoom: 19, attribution: osmAttribution, className: 'soft-osm-tiles' });
     mainOutline = addBoundary(mainMap);
     renderMain();
