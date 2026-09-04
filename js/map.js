@@ -128,10 +128,8 @@ window.YMaps = (() => {
   }
   function initMain() {
     mainMap = L.map('mainMap', { preferCanvas: true, zoomControl: true, zoomSnap: .25 }).setView(C().center, C().zoom);
-    const osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-    const osmAttribution = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
-    baseLayers.white = L.tileLayer(osmTiles, { maxZoom: 19, attribution: osmAttribution, className: 'white-basemap-tiles' }).addTo(mainMap);
-    baseLayers.osm = L.tileLayer(osmTiles, { maxZoom: 19, attribution: osmAttribution, className: 'soft-osm-tiles' });
+    baseLayers.carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: '© OpenStreetMap © CARTO' }).addTo(mainMap);
+    baseLayers.osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', className: 'soft-osm-tiles' });
     mainOutline = addBoundary(mainMap);
     renderMain();
   }
@@ -405,7 +403,7 @@ window.YMaps = (() => {
   }
   function initPolicy() {
     policyMap = L.map('policyMap', { preferCanvas: true, zoomSnap: .25 }).setView(C().center, C().zoom);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>', className: 'soft-osm-tiles' }).addTo(policyMap);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', className: 'soft-osm-tiles' }).addTo(policyMap);
     policyOutline = addBoundary(policyMap);
     policyMap.createPane('roadPriorityPane');
     policyMap.getPane('roadPriorityPane').style.zIndex = 470;
@@ -620,7 +618,7 @@ window.YMaps = (() => {
   let lstMap, lstOutline, lstCanvas, lstMetric = 'mean', lstVisible = true, lstIndex = {};
   function initLST() {
     lstMap = L.map('lstMap', { preferCanvas: true }).setView(C().center, C().zoom);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>', className: 'soft-osm-tiles' }).addTo(lstMap);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', className: 'soft-osm-tiles' }).addTo(lstMap);
     lstOutline = addBoundary(lstMap);
     const f = app.data.lst.features[0], coords = f.geometry.coordinates, vals = f.properties.metrics, br = f.properties.breaks;
     const Canvas = L.Layer.extend({
