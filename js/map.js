@@ -128,7 +128,12 @@ window.YMaps = (() => {
   }
   function initMain() {
     mainMap = L.map('mainMap', { preferCanvas: true, zoomControl: true, zoomSnap: .25 }).setView(C().center, C().zoom);
-    baseLayers.carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: '© OpenStreetMap © CARTO' }).addTo(mainMap);
+    const cartoKey = encodeURIComponent(C().cartoBasemapsApiKey || '');
+    baseLayers.carto = L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`, {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(mainMap);
     baseLayers.osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', className: 'soft-osm-tiles' });
     mainOutline = addBoundary(mainMap);
     renderMain();
