@@ -5,7 +5,7 @@
 
 /* 2026-08 pastel map and advanced regional comparison */
 .soft-osm-tiles{filter:saturate(.86) brightness(1.025) contrast(.96);opacity:.98}
-.leaflet-container{background:#eef2f0}
+.leaflet-container{background:#fff}
 .legend-box{background:rgba(255,255,255,.91)}
 .swatch{border:1px solid rgba(55,70,78,.12)}
 .metricbar-fill{background:linear-gradient(90deg,#b8d8ee,#f3e9b5,#e7a4ae)}
@@ -19,7 +19,7 @@
 @media(max-width:760px){.diagnosis-mix-head{align-items:flex-start;flex-direction:column}.all-rank-row{grid-template-columns:24px 52px minmax(55px,1fr) 47px}}
 
 /* 2026-08 final contrast, accessible bars and reliable road interaction */
-.light-basemap-tiles{filter:grayscale(1) saturate(0) brightness(1.18) contrast(.62);opacity:.8}
+.white-basemap-tiles{filter:grayscale(1) saturate(0) brightness(1.28) contrast(.78);opacity:1}
 .soft-osm-tiles{filter:saturate(.96) brightness(1.005) contrast(.99);opacity:1}
 .metricbar-fill,.barfill{background:#193b4c!important}
 .all-rank-row>div i{background:#193b4c}
