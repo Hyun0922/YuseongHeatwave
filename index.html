@@ -23,6 +23,7 @@
 <button class="tab" type="button" data-view="compare" aria-controls="v-compare">지역 비교</button>
 <button class="tab" type="button" data-view="policy" aria-controls="v-policy">정책지원</button>
 <button class="tab" type="button" data-view="lst" aria-controls="v-lst">고해상도 지표면온도</button>
+<button class="tab" type="button" data-view="report" aria-controls="v-report">보고서</button>
 </nav><main>
 <section class="view" id="v-overview"><div class="wrap">
 <div class="hero">
@@ -129,7 +130,7 @@
 <p class="sub">보라색은 두 지수 모두 5등급인 종합취약지역, 주황색은 5·4 또는 4·5인 우선확대관리지역입니다. 최종 결과는 Natural Breaks 5등급과 분석 적격 기준을 적용한 공개용 자료입니다.</p>
 </div>
 </div></section>
-<section class="view mapview on" id="v-map"><button class="btn mobile-filter" id="mobileFilter" type="button" aria-controls="mainSidebar" aria-expanded="false">☰ 필터</button><aside class="map-sidebar" id="mainSidebar"><button class="sidebar-close" type="button" aria-label="통합지도 필터 닫기">×</button><h3>표시 지표</h3>
+<section class="view mapview on" id="v-map"><button class="btn mobile-filter" id="mobileFilter" type="button" aria-controls="mainSidebar" aria-expanded="false">☰ 메뉴 열기</button><aside class="map-sidebar" id="mainSidebar"><button class="sidebar-close" type="button" aria-label="통합지도 메뉴 접기">‹ 메뉴 접기</button><h3>표시 지표</h3>
 <select id="metricSelect" aria-label="표시 지표"><option value="residential">취약계층 밀집형 취약지수</option>
 <option value="activity">보행 노출 위험형 취약지수</option>
 <option value="diagnosis">두 지수 종합 비교</option>
@@ -150,7 +151,7 @@
 <h3>상위 격자</h3>
 <div id="topGridMeta" class="top-grid-meta" aria-live="polite"></div>
 <div id="topGridList" class="top-grid-list" aria-label="점수 내림차순 상위 격자"></div>
-<p class="note">공개본에는 Welfare 세부 값·인원, 관리번호, 연락처, 로컬 경로와 분석 불필요 원본 필드가 포함되지 않습니다.</p></aside><div class="mapbox">
+<p class="note">공개본에는 Welfare 세부 값·인원, 관리번호, 연락처, 분석 불필요 원본 필드가 포함되지 않습니다.</p></aside><div class="mapbox">
 <div id="mainMap" class="leafmap" role="region" aria-label="유성구 폭염 취약지역 통합지도"></div>
 <div id="mainLegend" class="legend-box"></div>
 <div id="mapStatus" class="map-status" aria-live="polite"></div>
@@ -274,7 +275,7 @@
 <div class="table-wrap compare-table-wrap"><table id="compareTable" class="datatable compare-table"></table></div>
 </div>
 <div id="compareInsight" class="compare-insight"></div>
-</div></section><section class="view mapview" id="v-policy"><button class="btn mobile-filter" id="policyMobileFilter" type="button" aria-controls="policySidebar" aria-expanded="false">☰ 필터</button><aside class="map-sidebar policy-map-sidebar" id="policySidebar"><button class="sidebar-close" type="button" aria-label="정책지원 필터 닫기">×</button><h3>정책 유형</h3>
+</div></section><section class="view mapview" id="v-policy"><button class="btn mobile-filter" id="policyMobileFilter" type="button" aria-controls="policySidebar" aria-expanded="false">☰ 메뉴 열기</button><aside class="map-sidebar policy-map-sidebar" id="policySidebar"><button class="sidebar-close" type="button" aria-label="정책지원 메뉴 접기">‹ 메뉴 접기</button><h3>정책 유형</h3>
 <select id="policyTypeSelect" aria-label="정책 유형"></select><details id="roadLayerControls" class="layer-dropdown" style="display:none"><summary>표시 레이어 선택</summary><div class="layer-checks">
 <label><input type="checkbox" value="1" checked> 도로 고온 1등급</label><label><input type="checkbox" value="2" checked> 도로 고온 2등급</label><label><input type="checkbox" value="3" checked> 도로 고온 3등급</label><label><input type="checkbox" value="4" checked> 도로 고온 4등급</label><label><input type="checkbox" value="5" checked> 도로 고온 5등급</label><label><input type="checkbox" value="priority" checked> 살수차 우선 운영구간</label>
 </div></details><h3>후보 목록</h3>
@@ -284,13 +285,26 @@
 <div id="policyStatus" class="map-status" aria-live="polite"></div>
 <div id="policyDetail" class="detail-panel" aria-live="polite"></div>
 </div></section>
-<section class="view mapview" id="v-lst"><button class="btn mobile-filter" id="lstMobileFilter" type="button" aria-controls="lstSidebar" aria-expanded="false">☰ 필터</button><aside class="map-sidebar" id="lstSidebar"><button class="sidebar-close" type="button" aria-label="지표면온도 필터 닫기">×</button><h3>Landsat 30M 지표</h3>
+<section class="view mapview" id="v-lst"><button class="btn mobile-filter" id="lstMobileFilter" type="button" aria-controls="lstSidebar" aria-expanded="false">☰ 메뉴 열기</button><aside class="map-sidebar" id="lstSidebar"><button class="sidebar-close" type="button" aria-label="지표면온도 메뉴 접기">‹ 메뉴 접기</button><h3>Landsat 30M 지표</h3>
 <select id="lstMetric" aria-label="지표면온도 지표"><option value="mean">평균 LST</option>
 <option value="p90">상위 10% LST</option>
 <option value="max">최고 LST</option>
 <option value="above33">33℃ 이상 관측비율</option></select><button class="btn on lst-toggle" id="lstToggleBtn" type="button" aria-pressed="true">지표면온도 레이어 끄기</button><p class="note">2023년~2025년 5월~9월의 Landsat 위성 30m 격자 관측 결과를 제공합니다. Landsat 위성의 한반도 통과 시각은 오전 11시 전후이며 재방문 주기는 8~16일입니다. 따라서 해당 온도는 하루 최고 지표면온도가 아니며 연속된 폭염 기간 전체를 직접 나타내지 않습니다.</p></aside><div class="mapbox">
 <div id="lstMap" class="leafmap" role="region" aria-label="Landsat 30미터 지표면온도 지도"></div>
 <div id="lstLegend" class="legend-box"></div>
+</div></section>
+<section class="view" id="v-report"><div class="wrap report-wrap">
+<h1>보고서</h1>
+<p class="sub">유성구 폭염 대비 취약지점 분석 결과를 PDF 보고서로 확인하세요.</p>
+<article class="card pad report-card">
+<span class="report-format">PDF · 4.18 MB</span>
+<h2>유성구 폭염 대비 취약지점 분석 결과 보고서</h2>
+<p class="sub">아래 버튼을 누르면 보고서 전체를 다운로드할 수 있습니다.</p>
+<div class="report-actions">
+<a class="btn primary" href="reports/yuseong-heatwave-analysis-report.pdf" download="유성구 폭염 대비 취약지점 분석 결과 보고서.pdf">보고서 다운로드</a>
+<a class="btn" href="reports/yuseong-heatwave-analysis-report.pdf" target="_blank" rel="noopener">새 탭에서 보기</a>
+</div>
+</article>
 </div></section>
 </main>
 <div id="panoramaDialog" class="panorama-dialog" role="dialog" aria-labelledby="panoramaTitle" hidden>
